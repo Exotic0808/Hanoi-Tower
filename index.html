@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tower of Hanoi by : Tanish, Prem, Gunj & Kaustubh</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+
+    .game {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 60px;
+      height: 400px;
+    }
+
+    .peg-container {
+      position: relative;
+      width: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      transition: background-color 0.3s;
+    }
+
+    .peg-container.drag-over {
+      background-color: #d0f0ff;
+    }
+
+    .rod {
+      width: 10px;
+      height: 250px;
+      background-color: #5e3813;
+      position: absolute;
+      bottom: 15px;
+      z-index: 0;
+    }
+
+    .base {
+      width: 120px;
+      height: 15px;
+      background-color: #8b5a2b;
+      border-radius: 4px;
+      margin-top: 5px;
+      z-index: 1;
+    }
+
+    .disk {
+      height: 25px;
+      margin: 2px 0;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      line-height: 25px;
+      text-align: center;
+      cursor: grab;
+      z-index: 2;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .top-disk {
+      outline: 3px solid gold;
+      box-shadow: 0 0 10px gold;
+      z-index: 5;
+    }
+
+    .disk1 { width: 40px; background-color: #4caf50; }
+    .disk2 { width: 60px; background-color: #2196f3; }
+    .disk3 { width: 80px; background-color: #ff9800; }
+    .disk4 { width: 100px; background-color: #9c27b0; }
+    .disk5 { width: 120px; background-color: #e91e63; }
+
+    #moves {
+      font-size: 1.2em;
+      margin-top: 15px;
+    }
+
+    h1, .controls {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tower of Hanoi 
+      by- Tanish, Prem, Gunj & Kaustubh</h1>
+
+  <div class="controls">
+    <label for="diskSelect">Disks:</label>
+    <select id="diskSelect">
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5" selected>5</option>
+    </select>
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="showNextMove()">Show Next Move</button>
+  </div>
+
+  <div id="moves">Moves: 0</div>
+
+  <div class="game">
+    <div class="peg-container" id="peg1" ondragover="allowDrop(event)" ondrop="drop(event)">
+      <div class="rod"></div>
+      <div class="base"></div>
+    </div>
+    <div class="peg-container" id="peg2" ondragover="allowDrop(event)" ondrop="drop(event)">
+      <div class="rod"></div>
+      <div class="base"></div>
+    </div>
+    <div class="peg-container" id="peg3" ondragover="allowDrop(event)" ondrop="drop(event)">
+      <div class="rod"></div>
+      <div class="base"></div>
+    </div>
+  </div>
+
+  <script>
+    let selectedDisk = null;
+    let moveCount = 0;
+    let moveList = [];
+    let moveIndex = 0;
+
+    function startGame() {
+      moveCount = 0;
+      document.getElementById("moves").innerText = "Moves: 0";
+      const diskCount = parseInt(document.getElementById("diskSelect").value);
+
+      ['peg1', 'peg2', 'peg3'].forEach(id => {
+        const peg = document.getElementById(id);
+        peg.querySelectorAll('.disk').forEach(d => d.remove());
+      });
+
+      const peg1 = document.getElementById("peg1");
+      const base = peg1.querySelector('.base');
+
+      for (let i = 1; i <= diskCount; i++) {
+        const disk = document.createElement("div");
+        disk.classList.add("disk", `disk${i}`);
+        disk.setAttribute("draggable", "true");
+        disk.setAttribute("data-size", i);
+        disk.innerText = i;
+        disk.addEventListener("dragstart", drag);
+        peg1.insertBefore(disk, base);
+      }
+
+      updateTopDisks();
+
+      // ✅ Reset auto-move system
+      moveList = [];
+      moveIndex = 0;
+      generateMoves(diskCount, 'peg1', 'peg3', 'peg2');
+    }
+
+    function drag(event) {
+      const disk = event.target;
+      const parent = disk.parentElement;
+      const disks = Array.from(parent.querySelectorAll('.disk'));
+      const topDisk = disks[0];
+      if (disk === topDisk) {
+        selectedDisk = disk;
+      } else {
+        event.preventDefault();
+      }
+    }
+
+    function allowDrop(event) {
+      event.preventDefault();
+      event.currentTarget.classList.add("drag-over");
+    }
+
+    function drop(event) {
+      const peg = event.currentTarget;
+      peg.classList.remove("drag-over");
+
+      if (!selectedDisk) return;
+
+      const disks = Array.from(peg.querySelectorAll('.disk'));
+      const topDisk = disks[0];
+
+      if (!topDisk || parseInt(selectedDisk.dataset.size) < parseInt(topDisk.dataset.size)) {
+        if (topDisk) {
+          peg.insertBefore(selectedDisk, topDisk);
+        } else {
+          const base = peg.querySelector('.base');
+          peg.insertBefore(selectedDisk, base);
+        }
+
+        moveCount++;
+        document.getElementById("moves").innerText = `Moves: ${moveCount}`;
+        selectedDisk = null;
+        updateTopDisks();
+        checkWin();
+      } else {
+        alert("❌ Invalid move: Larger disk cannot go on smaller one.");
+      }
+    }
+
+    function updateTopDisks() {
+      document.querySelectorAll('.disk').forEach(d => d.classList.remove('top-disk'));
+
+      ['peg1', 'peg2', 'peg3'].forEach(id => {
+        const peg = document.getElementById(id);
+        const disks = Array.from(peg.querySelectorAll('.disk'));
+        if (disks.length > 0) {
+          const topDisk = disks[0];
+          topDisk.classList.add('top-disk');
+        }
+      });
+    }
+
+    function checkWin() {
+      const total = parseInt(document.getElementById("diskSelect").value);
+      const peg3 = document.getElementById("peg3");
+      const disks = peg3.querySelectorAll('.disk');
+      if (disks.length === total) {
+        const ordered = Array.from(disks).map(d => parseInt(d.dataset.size));
+        const isCorrect = ordered.every((v, i, arr) => i === 0 || v > arr[i - 1]);
+
+        if (isCorrect) {
+          setTimeout(() => {
+            alert(`🎉 Congratulations! You have successfully completed the task in ${moveCount} moves.`);
+          }, 100);
+        }
+      }
+    }
+
+    function generateMoves(n, from, to, aux) {
+      if (n === 0) return;
+      generateMoves(n - 1, from, aux, to);
+      moveList.push({ disk: n, from, to });
+      generateMoves(n - 1, aux, to, from);
+    }
+
+    function showNextMove() {
+      if (moveIndex >= moveList.length) {
+        alert("🎉 All moves completed!");
+        return;
+      }
+
+      const move = moveList[moveIndex];
+      const fromPeg = document.getElementById(move.from);
+      const toPeg = document.getElementById(move.to);
+
+      const fromDisks = Array.from(fromPeg.querySelectorAll('.disk'));
+      const diskToMove = fromDisks.find(d => parseInt(d.dataset.size) === move.disk);
+
+      if (!diskToMove) {
+        alert(`Disk ${move.disk} not found on ${move.from}.`);
+        return;
+      }
+
+      const toDisks = Array.from(toPeg.querySelectorAll('.disk'));
+      const topToDisk = toDisks[0];
+
+      if (!topToDisk || parseInt(diskToMove.dataset.size) < parseInt(topToDisk.dataset.size)) {
+        if (topToDisk) {
+          toPeg.insertBefore(diskToMove, topToDisk);
+        } else {
+          const base = toPeg.querySelector('.base');
+          toPeg.insertBefore(diskToMove, base);
+        }
+
+        moveCount++;
+        moveIndex++;
+        document.getElementById("moves").innerText = `Moves: ${moveCount}`;
+        updateTopDisks();
+        checkWin();
+      } else {
+        alert("⚠️ Invalid move: Larger disk cannot go on smaller one.");
+      }
+    }
+
+    window.onload = startGame;
+  </script>
+</body>
+</html>
